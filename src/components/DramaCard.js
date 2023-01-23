@@ -1,4 +1,4 @@
-import { Axios } from 'axios';
+import Axios from 'axios';
 import React, { useState } from 'react';
 const DramaCard = (props) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +56,7 @@ const DramaCard = (props) => {
               <input
                 type='file'
                 className='form-control form-control-sm'
-                onChange={(e) => setFile(e.target.file[0])}
+                onChange={(e) => setFile(e.target.files[0])}
               />
             </div>
           </div>
@@ -65,7 +65,7 @@ const DramaCard = (props) => {
           src={
             props.photo ? `/uploaded-photos/${props.photo}` : '/fallback.png'
           }
-          alt={`${props.drama.name} named ${props.drama.type}`}
+          // alt={`${props.drama.name} named ${props.drama.type}`}
           className='card-img-top'
         />
       </div>
@@ -93,9 +93,7 @@ const DramaCard = (props) => {
                 <button
                   className='btn btn small btn-outline-danger'
                   onClick={async () => {
-                    const test = await Axios.delete(
-                      `/api/dramas/${props.drama._id}`
-                    );
+                    await Axios.delete(`/dramas/${props.drama._id}`);
                     props.setDramaState((prev) => {
                       return prev.filter(
                         (drama) => drama._id != props.drama._id

@@ -6,6 +6,9 @@ const sanitizeHtml = require('sanitize-html');
 const fse = require('fs-extra');
 const sharp = require('sharp');
 const path = require('path');
+const React = require('react');
+const ReactDOMServer = require('react-dom/server');
+const DramaCard = require('./src/components/DramaCard').default;
 
 //App setup
 const app = express();
@@ -35,8 +38,25 @@ function passwordProtected(req, res, next) {
 //Routes
 app.get('/', async (req, res) => {
   let dramas = await db.collection('cdramas').find({}).toArray();
-  console.log('DATA: ', dramas);
-  res.render('home', { dramas: dramas });
+  const generatedHtml = ReactDOMServer.renderToString(
+    <div className='container'>
+      {!dramas.length && <p>No dramas yet, Admin will upload soon!</p>}
+      <div className='drama-grid mb-3'>
+        {dramas.map((drama) => (
+          <DramaCard
+            key={drama._id}
+            drama={drama}
+            photo={drama.photo}
+            readOnly={true}
+          />
+        ))}
+      </div>
+      <p>
+        <a href='/admin'>Login/manage drama list</a>
+      </p>
+    </div>
+  );
+  res.render('home', { generatedHtml });
 });
 
 app.use(passwordProtected);
@@ -60,6 +80,47 @@ app.post('/create-drama', upload.single('photo'), cleanUp, async (req, res) => {
     .collection('cdramas')
     .findOne({ _id: new ObjectId(data.insertedId) });
   res.send(newData);
+});
+
+app.post('/update-drama', upload.single('photo'), cleanUp, async (req, res) => {
+  if (req.file) {
+    // if they are uploading a new photo
+    const photoFileName = `${Date.now()}.jpg`;
+    await sharp(req.file.buffer)
+      .resize(844, 456)
+      .jpeg({ quality: 60 })
+      .toFile(path.join('public', 'uploaded-photos', photoFileName));
+    req.cleanData.photo = photoFileName;
+    const info = await db
+      .collection('cdramas')
+      .findOneAndUpdate(
+        { _id: new ObjectId(req.body._id) },
+        { $set: req.cleanData }
+      );
+    if (info.value.photo) {
+      fse.remove(path.join('public', 'uploaded-photos', info.value.photo));
+    }
+    res.send(photoFileName);
+  } else {
+    // if they are not uploading a new photo
+    db.collection('cdramas').findOneAndUpdate(
+      { _id: new ObjectId(req.body._id) },
+      { $set: req.cleanData }
+    );
+    res.send(false);
+  }
+});
+
+app.delete('/dramas/:id', async (req, res) => {
+  if (typeof req.params.id !== 'string') req.params.id = '';
+  const doc = db
+    .collection('cdramas')
+    .findOne({ _id: new ObjectId(req.params.id) });
+  if (doc.photo) {
+    fse.remove(path.join('public', 'uploaded-photos', doc.photo));
+  }
+  db.collection('cdramas').deleteOne({ _id: new ObjectId(req.params.id) });
+  res.send('Drama succussfully deleted!');
 });
 //API Json
 
