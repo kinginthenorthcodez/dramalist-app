@@ -12,7 +12,7 @@ const DramaCard = (props) => {
     setIsEditing(false);
     props.setDramaState((prev) =>
       prev.map((drama) => {
-        if (drama._id == props.drama.id) {
+        if (drama._id == props.drama._id) {
           return {
             ...drama,
             name: draftName,
@@ -27,7 +27,7 @@ const DramaCard = (props) => {
     if (file) {
       data.append('photo', file);
     }
-    data.append('_id', props.drama.id);
+    data.append('_id', props.drama._id);
     data.append('name', props.drama.name);
     data.append('type', props.drama.type);
     data.append('genre', props.drama.genre);
@@ -38,7 +38,7 @@ const DramaCard = (props) => {
     if (newPhoto.data) {
       props.setDramaState((prev) => {
         return prev.map((drama) => {
-          if (drama._id == props.drama.id) {
+          if (drama._id == props.drama._id) {
             return { ...drama, photo: newPhoto.data };
           }
           return drama;
@@ -62,7 +62,9 @@ const DramaCard = (props) => {
           </div>
         )}
         <img
-          src={props.photo ? `/uploaded-photo/${props.photo}` : '/fallback.png'}
+          src={
+            props.photo ? `/uploaded-photos/${props.photo}` : '/fallback.png'
+          }
           alt={`${props.drama.name} named ${props.drama.type}`}
           className='card-img-top'
         />
@@ -92,11 +94,11 @@ const DramaCard = (props) => {
                   className='btn btn small btn-outline-danger'
                   onClick={async () => {
                     const test = await Axios.delete(
-                      `/api/dramas/${props.drama.id}`
+                      `/api/dramas/${props.drama._id}`
                     );
                     props.setDramaState((prev) => {
                       return prev.filter(
-                        (drama) => drama._id != props.drama.id
+                        (drama) => drama._id != props.drama._id
                       );
                     });
                   }}

@@ -1,17 +1,37 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const dotenv = require('dotenv');
 const express = require('express');
+const multer = require('multer');
+const sanitizeHtml = require('sanitize-html');
+const fse = require('fs-extra');
+const sharp = require('sharp');
+const path = require('path');
 
 //App setup
 const app = express();
+const upload = multer();
 dotenv.config();
 app.set('view engine', 'ejs');
 app.set('views', './views');
 app.use(express.static('public'));
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 //Database connection
 let db;
+// Setup photo directory uploads on start
 
+fse.ensureDirSync(path.join('public', 'uploaded-photos'));
+//Middleware
+function passwordProtected(req, res, next) {
+  res.set('WWW-Authenticate', "Basic realm='Drama List App'");
+  if (req.headers.authorization == process.env.PWD) {
+    next();
+  } else {
+    console.log(req.headers.authorization);
+    res.status(401).send('Only authorized user allowed.Try Agian!');
+  }
+}
 //Routes
 app.get('/', async (req, res) => {
   let dramas = await db.collection('cdramas').find({}).toArray();
@@ -19,10 +39,28 @@ app.get('/', async (req, res) => {
   res.render('home', { dramas: dramas });
 });
 
+app.use(passwordProtected);
 app.get('/admin', (req, res) => {
   res.render('admin');
 });
 
+app.post('/create-drama', upload.single('photo'), cleanUp, async (req, res) => {
+  if (req.file) {
+    const photoFileName = `${Date.now()}.jpg`;
+    console.log('Photo:', photoFileName);
+    await sharp(req.file.buffer)
+      .resize(844, 456)
+      .jpeg({ quality: 60 })
+      .toFile(path.join('public', 'uploaded-photos', photoFileName));
+    req.cleanData.photo = photoFileName;
+  }
+  console.log(req.body);
+  const data = await db.collection('cdramas').insertOne(req.cleanData);
+  const newData = await db
+    .collection('cdramas')
+    .findOne({ _id: new ObjectId(data.insertedId) });
+  res.send(newData);
+});
 //API Json
 
 app.get('/api/dramas', async (req, res) => {
@@ -31,6 +69,31 @@ app.get('/api/dramas', async (req, res) => {
   res.json(dramas);
 });
 
+//Clean function middleware
+
+function cleanUp(req, res, next) {
+  if (typeof req.body.name !== 'string') req.body.name = '';
+  if (typeof req.body.type !== 'string') req.body.type = '';
+  if (typeof req.body.genre !== 'string') req.body.genre = '';
+  if (typeof req.body._id !== 'string') req.body._id = '';
+
+  req.cleanData = {
+    name: sanitizeHtml(req.body.name.trim(), {
+      allowedTags: [],
+      allowedAttributes: {},
+    }),
+    type: sanitizeHtml(req.body.type.trim(), {
+      allowedTags: [],
+      allowedAttributes: {},
+    }),
+    genre: sanitizeHtml(req.body.genre.trim(), {
+      allowedTags: [],
+      allowedAttributes: {},
+    }),
+  };
+
+  next();
+}
 //Database connection
 async function start() {
   try {

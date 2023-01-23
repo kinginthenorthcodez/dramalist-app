@@ -24,14 +24,17 @@ function App() {
           This is dramalist {dramaState.length} app powered by Express,Mongodb
           and Nodejs
         </p>
-        {dramaState.map((drama, idx) => (
-          <DramaCard
-            key={idx}
-            drama={drama}
-            setDramaState={setDramaState}
-            photo={''}
-          />
-        ))}
+        <CreateNewForm setDramaState={setDramaState} />
+        <div className='drama-grid'>
+          {dramaState.map((drama, idx) => (
+            <DramaCard
+              key={drama._id}
+              drama={drama}
+              setDramaState={setDramaState}
+              photo={drama.photo}
+            />
+          ))}
+        </div>
       </div>
     </>
   );
