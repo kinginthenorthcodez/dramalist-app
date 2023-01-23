@@ -167,7 +167,7 @@ async function start() {
   } catch (e) {
     console.error(e);
   } finally {
-    console.log('Ok let go!');
+    console.log('Ok lets go!');
   }
 }
 start();

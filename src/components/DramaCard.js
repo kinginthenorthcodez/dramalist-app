@@ -65,7 +65,7 @@ const DramaCard = (props) => {
           src={
             props.photo ? `/uploaded-photos/${props.photo}` : '/fallback.png'
           }
-          // alt={`${props.drama.name} named ${props.drama.type}`}
+          alt={`${props.drama.name} named ${props.drama.type}`}
           className='card-img-top'
         />
       </div>
